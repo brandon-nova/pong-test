@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pong Game</title>
+  <style>
+    canvas {
+      background-color: black;
+      display: block;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="pongCanvas" width="800" height="400"></canvas>
+  
+  <!-- Counter display for the game -->
+  <p>Game Reset Counter: <span id="gameResetCounter">0</span></p>
+
+  <script>
+    const canvas = document.getElementById('pongCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const paddleWidth = 100;
+    const paddleHeight = 10;
+    const paddleSpeed = 5;
+    const ballSize = 30; // Increase ball size for a bigger image
+    const maxReflectionAngle = 30; // Maximum variation angle for reflection
+
+    let paddle1X = canvas.width / 2 - paddleWidth / 2;
+    let paddle2X = canvas.width / 2 - paddleWidth / 2;
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+    let ballSpeed = 3; // Initial speed of the ball
+    let ballDX = 1;
+    let ballDY = -1; // Ensure the ball moves upwards initially
+
+    let keyDownLeft = false;
+    let keyDownRight = false;
+
+    let gameResetCounter = 0; // Counter for tracking game resets
+    let globalCounter = 0; // Global counter variable
+
+    // Load the ball image
+    const ballImage = new Image();
+    ballImage.src = 'https://i.ibb.co/0nhDGBZ/Final-PToken.png';
+
+    function drawPaddle(x, y) {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(x, y, paddleWidth, paddleHeight);
+    }
+
+    function drawBall() {
+      // Draw the scaled-up ball image
+      ctx.drawImage(ballImage, ballX - ballSize / 2, ballY - ballSize / 2, ballSize, ballSize);
+    }
+
+    function movePaddle() {
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'ArrowLeft') {
+          keyDownLeft = true;
+        } else if (event.key === 'ArrowRight') {
+          keyDownRight = true;
+        }
+      });
+
+      document.addEventListener('keyup', function(event) {
+        if (event.key === 'ArrowLeft') {
+          keyDownLeft = false;
+        } else if (event.key === 'ArrowRight') {
+          keyDownRight = false;
+        }
+      });
+    }
+
+    function moveBall() {
+      ballX += ballDX * ballSpeed;
+      ballY += ballDY * ballSpeed;
+
+      if (ballX + ballSize >= canvas.width || ballX - ballSize <= 0) {
+        ballDX = -ballDX;
+      }
+
+      if (ballY - ballSize <= 0) {
+        ballDY = -ballDY;
+      } else if (ballY + ballSize >= canvas.height - paddleHeight) {
+        if (ballX >= paddle1X && ballX <= paddle1X + paddleWidth) {
+          // Reflect off player paddle
+          let angleVariation = (Math.random() * 2 - 1) * maxReflectionAngle; // Random angle variation
+          let collisionPoint = ballX - (paddle1X + paddleWidth / 2); // Calculate collision point relative to paddle center
+          let normalizedCollisionPoint = collisionPoint / (paddleWidth / 2); // Normalize collision point
+          let reflectionAngle = normalizedCollisionPoint * (Math.PI / 4) + angleVariation; // Calculate reflection angle
+          ballDY = -Math.abs(Math.sin(reflectionAngle)); // Ensure the ball moves upwards
+          ballDX = Math.cos(reflectionAngle);
+          // Increase tangential speed by 10%
+          let tangentialSpeed = ballSpeed * Math.abs(ballDX);
+          let increase = tangentialSpeed * 0.1; // 10% increase
+          ballSpeed += increase / Math.abs(ballDX); // Adjust ball speed
+        } else {
+          // Reset ball position
+          resetBall();
+        }
+      } else if (ballY + ballSize >= canvas.height) {
+        // If the ball misses the opponent's paddle, reset the ball
+        resetBall();
+      }
+    }
+
+    function resetBall() {
+      // Increment the game reset counter
+      gameResetCounter++;
+      // Increment the global counter
+      globalCounter++;
+      // Update the game reset counter display
+      document.getElementById("gameResetCounter").innerText = gameResetCounter;
+      // Update the global counter display (assuming it exists)
+      if (document.getElementById("counterDisplay")) {
+        document.getElementById("counterDisplay").innerText = globalCounter;
+      }
+
+      // Reset ball position
+      ballX = canvas.width / 2;
+      ballY = canvas.height / 2;
+      // Reset ball speed
+      ballSpeed = 3; // Reset to original speed
+      // Ensure the ball moves upwards after reset
+      ballDY = -1;
+    }
+
+    function updatePaddlePosition() {
+      if (keyDownLeft) {
+        paddle1X = Math.max(paddle1X - paddleSpeed, 0);
+      }
+      if (keyDownRight) {
+        paddle1X = Math.min(paddle1X + paddleSpeed, canvas.width - paddleWidth);
+      }
+
+      // Move the opponent paddle towards the ball
+      if (ballX < paddle2X + paddleWidth / 2) {
+        paddle2X -= paddleSpeed;
+      } else {
+        paddle2X += paddleSpeed;
+      }
+      // Ensure the opponent paddle stays within the canvas
+      paddle2X = Math.max(paddle2X, 0);
+      paddle2X = Math.min(paddle2X, canvas.width - paddleWidth);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updatePaddlePosition();
+      drawPaddle(paddle1X, canvas.height - paddleHeight);
+      drawPaddle(paddle2X, 0); // Draw second paddle at the top
+      drawBall();
+      moveBall();
+      requestAnimationFrame(draw);
+    }
+
+    movePaddle();
+    draw();
+  </script>
+</body>
+</html>
